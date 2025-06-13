@@ -11,20 +11,30 @@ import numpy as np
 # === API-Funktion ===
 def fetch_bitget_data_and_save(symbol="BTCUSDT", interval="1h", days=7, filename="btc_bitget_7days.csv"):
     """
-    Führt API-Calls aus und speichert die Daten als CSV.
+    Holt Candle-Daten von Bitget und speichert sie als CSV.
     """
-    end_time = int(time.time() * 1000)  # Jetzt in ms
-    start_time = end_time - days * 24 * 60 * 60 * 1000  # Vor X Tagen
+    # Mapping: Intervall -> Sekundentakt
+    interval_map = {
+        "1m": "60",
+        "5m": "300",
+        "15m": "900",
+        "1h": "3600",
+        "4h": "14400",
+        "1d": "86400"
+    }
+    granularity = interval_map.get(interval, "3600")
+
+    end_time = int(time.time() * 1000)
+    start_time = end_time - days * 24 * 60 * 60 * 1000
 
     url = "https://api.bitget.com/api/v2/market/candles"
     params = {
         "symbol": symbol,
-        "granularity": interval,
+        "granularity": granularity,
         "startTime": start_time,
         "endTime": end_time
     }
 
-    # 🔒 Fehlerbehandlung beim API-Zugriff
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()
@@ -35,11 +45,9 @@ def fetch_bitget_data_and_save(symbol="BTCUSDT", interval="1h", days=7, filename
     except Exception as e:
         raise Exception(f"API-Zugriff fehlgeschlagen: {e}")
 
-    # ✅ Speichern in data/
     os.makedirs("data", exist_ok=True)
     path = os.path.join("data", filename)
 
-    # 💾 CSV schreiben
     with open(path, mode="w", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(["timestamp", "datetime", "open", "high", "low", "close", "volume"])
@@ -54,12 +62,12 @@ def fetch_bitget_data_and_save(symbol="BTCUSDT", interval="1h", days=7, filename
 # === Streamlit App ===
 st.title("📊 DaVinci Trading App")
 
-# 🧠 Merke in SessionState, ob Datei erzeugt wurde
+# Session-Status: Hat der User Daten geladen?
 if "csv_created" not in st.session_state:
     st.session_state.csv_created = False
 
-# 📥 Button: API-Daten abrufen und speichern
-if st.button("API-Daten abrufen und CSV erstellen"):
+# Daten abrufen und speichern
+if st.button("📥 API-Daten abrufen und CSV erstellen"):
     try:
         csv_path = fetch_bitget_data_and_save()
         st.session_state.csv_created = True
@@ -69,17 +77,17 @@ if st.button("API-Daten abrufen und CSV erstellen"):
         st.error(f"❌ Fehler: {e}")
         st.stop()
 
-# 📂 Lade CSV nur, wenn vorhanden und erzeugt
+# Daten nur anzeigen, wenn erfolgreich erstellt
 csv_path = "data/btc_bitget_7days.csv"
 if st.session_state.csv_created and os.path.exists(csv_path):
     df = pd.read_csv(csv_path)
     df["close"] = df["close"].astype(float)
     df["volume"] = df["volume"].astype(float)
 
-    st.subheader("📄 Rohdaten aus Bitget CSV")
+    st.subheader("📄 Rohdaten")
     st.dataframe(df)
 
-    # 🔧 Technische Indikatoren berechnen
+    # Indikatoren berechnen
     st.subheader("📐 Technische Indikatoren")
     df["sma_20"] = df["close"].rolling(window=20).mean()
     df["ema_20"] = df["close"].ewm(span=20, adjust=False).mean()
@@ -92,8 +100,8 @@ if st.session_state.csv_created and os.path.exists(csv_path):
 
     df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
 
-    # 📈 Diagramme anzeigen
-    st.subheader("📊 Charts")
+    # Visualisierung
+    st.subheader("📈 Charts")
     fig, axs = plt.subplots(4, 1, figsize=(12, 12), sharex=True)
 
     axs[0].plot(df["datetime"], df["close"], label="Close", color="black")
@@ -110,11 +118,11 @@ if st.session_state.csv_created and os.path.exists(csv_path):
     axs[2].plot(df["datetime"], df["obv"], label="OBV", color="brown")
     axs[2].set_title("On-Balance Volume")
 
-    axs[3].bar(df["datetime"], df["volume"], label="Volume", color="gray")
+    axs[3].bar(df["datetime"], df["volume"], label="Volumen", color="gray")
     axs[3].set_title("Handelsvolumen")
 
     plt.tight_layout()
     st.pyplot(fig)
 
 else:
-    st.info("⬆️ Bitte zuerst auf 'API-Daten abrufen' klicken.")
+    st.info("⬆️ Klicke auf „API-Daten abrufen“, um zu starten.")
