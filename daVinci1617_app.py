@@ -39,7 +39,7 @@ def fetch_bitget_data_and_save(symbol="BTCUSDT", interval="1h", days=7, filename
     candles = sorted(data["data"], key=lambda x: int(x[0]))
 
     os.makedirs("data", exist_ok=True)
-    path = os.path.join("new_data", filename)
+    path = os.path.join("data", filename)
 
     with open(path, mode="w", newline="") as file:
         writer = csv.writer(file)
@@ -63,7 +63,7 @@ if st.button("API-Daten abrufen und CSV erstellen"):
         st.error(f"Fehler: {e}")
 
 # CSV laden und anzeigen
-csv_path = "new_data/btc_bitget_7days.csv"
+csv_path = "data/btc_bitget_7days.csv"
 if os.path.exists(csv_path):
     df = pd.read_csv(csv_path)
     st.subheader("Daten aus der CSV-Datei:")
