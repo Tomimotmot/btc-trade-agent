@@ -80,30 +80,25 @@ if st.session_state.csv_created and os.path.exists(csv_path):
     df["rsi_14"] = 100 - (100 / (1 + rs))
 
     df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
-
+    
     # === Chart-Visualisierung ===
-    st.subheader("📈 Charts")
-    fig, axs = plt.subplots(4, 1, figsize=(12, 12), sharex=True)
-
-    axs[0].plot(df["datetime"], df["close"], label="Close", color="gray")
-    axs[0].plot(df["datetime"], df["ma_8"], label="MA 8", color="red")
-    axs[0].plot(df["datetime"], df["ma_14"], label="MA 14", color="blue")
-    axs[0].set_title("BTC Preis + MA 8/14")
-    axs[0].legend()
-
-    axs[1].plot(df["datetime"], df["rsi_14"], label="RSI 14", color="purple")
-    axs[1].axhline(70, color="red", linestyle="--")
-    axs[1].axhline(30, color="green", linestyle="--")
-    axs[1].set_title("RSI")
-
-    axs[2].plot(df["datetime"], df["obv"], label="OBV", color="brown")
-    axs[2].set_title("On-Balance Volume")
-
-    axs[3].bar(df["datetime"], df["volume"], label="Volumen", color="lightgray")
-    axs[3].set_title("Handelsvolumen")
-
-    plt.tight_layout()
+    st.subheader("📈 BTC Preis + MA 8/14 (1H Timeframe)")
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    # Plot MA 8, MA 14 und Close
+    ax.plot(df["datetime"], df["close"], label="Close", color="gray")
+    ax.plot(df["datetime"], df["ma_8"], label="MA 8", color="red")
+    ax.plot(df["datetime"], df["ma_14"], label="MA 14", color="blue")
+    
+    # Titel und Legende
+    ax.set_title("BTC Preis + MA 8/14")
+    ax.legend()
+    
+    # Graph anzeigen
     st.pyplot(fig)
-
+    
+    
+    
+    
 else:
     st.info("⬆️ Bitte zuerst auf 'API-Daten abrufen' klicken.")
