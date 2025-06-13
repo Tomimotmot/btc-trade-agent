@@ -82,7 +82,11 @@ if st.session_state.csv_created and os.path.exists(csv_path):
 
     df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
     
-    # === Chart-Visualisierung ===
+    # Testausgabe zur Kontrolle
+    st.write("🔎 Datentypen:", df.dtypes)
+    st.write("🧪 Vorschau:", df.head())
+    
+    # Zeichnen
     fig = draw_price_chart(df)
     st.pyplot(fig)
     
