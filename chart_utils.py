@@ -5,20 +5,14 @@ import pandas as pd
 def draw_price_chart(df: pd.DataFrame, title: str = "BTC Close-Preis"):
     df = df.copy()
 
-    # ✅ timestamp absichern
-    df["timestamp"] = pd.to_numeric(df["timestamp"], errors="coerce")
-    df = df.dropna(subset=["timestamp", "close"])
-
-    # ✅ datetime erzeugen (aus timestamp in ms)
-    df["datetime"] = pd.to_datetime(df["timestamp"].astype("int64"), unit="ms")
-
-    # ✅ nochmal absichern, dass alle Werte da sind
-    df = df.dropna(subset=["datetime", "close"])
-
-    # ✅ Preis in float konvertieren
+    # ✅ Nutze die vorhandene datetime-Spalte
+    df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
     df["close"] = pd.to_numeric(df["close"], errors="coerce")
 
-    # Plot
+    # ❌ Fehlerhafte Zeilen raus
+    df = df.dropna(subset=["datetime", "close"])
+
+    # ✅ Plot
     fig, ax = plt.subplots(figsize=(12, 6))
     ax.plot(df["datetime"], df["close"], label="Close", color="gray")
 
@@ -27,7 +21,6 @@ def draw_price_chart(df: pd.DataFrame, title: str = "BTC Close-Preis"):
     ax.set_ylabel("Preis (USDT)")
     ax.legend()
 
-    # ✅ Zeitachse formatieren
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M'))
     fig.autofmt_xdate()
     fig.tight_layout()
