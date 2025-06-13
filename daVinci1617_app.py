@@ -7,7 +7,7 @@ import datetime
 import csv
 import os
 import numpy as np
-from chart1 import draw_ma_chart
+from chart_utils import draw_price_chart
 
 # === API-Funktion ====
 def fetch_bitget_spot_data_and_save(symbol="BTCUSDT", granularity="1h", filename="btc_bitget_7days.csv"):
@@ -83,14 +83,8 @@ if st.session_state.csv_created and os.path.exists(csv_path):
     df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
     
     # === Chart-Visualisierung ===
-    
-    # Chart anzeigen
-    st.subheader("📈 BTC Preis + MA 8/14 (1H Timeframe)")
-    try:
-        fig = draw_ma_chart(df)
-        st.pyplot(fig)
-    except Exception as e:
-        st.error(f"Fehler beim Erstellen des Charts: {e}")
+    fig = draw_price_chart(df)
+    st.pyplot(fig)
     
     
     
