@@ -8,7 +8,7 @@ import csv
 import os
 import numpy as np
 
-# === API-Funktion ===
+# === API-Funktion ====
 def fetch_bitget_spot_data_and_save(symbol="BTCUSDT", granularity="1h", filename="btc_bitget_7days.csv"):
     url = "https://api.bitget.com/api/v2/spot/market/candles"
     params = {
