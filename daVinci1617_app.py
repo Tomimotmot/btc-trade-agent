@@ -39,7 +39,7 @@ def fetch_bitget_data_and_save(symbol="BTCUSDT", interval="1h", days=7, filename
     candles = sorted(data["data"], key=lambda x: int(x[0]))
 
     os.makedirs("data", exist_ok=True)
-    path = os.path.join("data", filename)
+    path = os.path.join("new_data", filename)
 
     with open(path, mode="w", newline="") as file:
         writer = csv.writer(file)
