@@ -63,7 +63,7 @@ if st.button("API-Daten abrufen und CSV erstellen"):
         st.error(f"Fehler: {e}")
 
 # CSV laden und anzeigen
-csv_path = "data/btc_bitget_7days.csv"
+csv_path = "new_data/btc_bitget_7days.csv"
 if os.path.exists(csv_path):
     df = pd.read_csv(csv_path)
     st.subheader("Daten aus der CSV-Datei:")
