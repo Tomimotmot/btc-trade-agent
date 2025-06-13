@@ -82,21 +82,14 @@ if st.session_state.csv_created and os.path.exists(csv_path):
     df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
     
     # === Chart-Visualisierung ===
+    
+    # Chart anzeigen
     st.subheader("📈 BTC Preis + MA 8/14 (1H Timeframe)")
-    fig, ax = plt.subplots(figsize=(12, 6))
-    
-    # Plot MA 8, MA 14 und Close
-    ax.plot(df["datetime"], df["close"], label="Close", color="gray")
-    ax.plot(df["datetime"], df["ma_8"], label="MA 8", color="red")
-    ax.plot(df["datetime"], df["ma_14"], label="MA 14", color="blue")
-    
-    # Titel und Legende
-    ax.set_title("BTC Preis + MA 8/14")
-    ax.legend()
-    
-    # Graph anzeigen
-    st.pyplot(fig)
-    
+    try:
+        fig = draw_ma_chart(df)
+        st.pyplot(fig)
+    except Exception as e:
+        st.error(f"Fehler beim Erstellen des Charts: {e}")
     
     
     
