@@ -111,3 +111,39 @@ if st.button("🎓 Modell trainieren"):
         st.pyplot(fig)
     else:
         st.error(status)
+        
+        
+        
+        
+if st.button("🔮 Nächste 3h prognostizieren"):
+    last_df = df.tail(20).copy()
+    forecast = trainer.predict_next_3h(last_df)
+    current_price = last_df["close"].iloc[-1]
+    last_time = pd.to_datetime(last_df["datetime"].iloc[-1])
+    future_times = [last_time + pd.Timedelta(hours=i+1) for i in range(3)]
+
+    # Prozentänderung (von jetzt bis 3. Stunde)
+    final_forecast = forecast[-1]
+    delta_pct = ((final_forecast - current_price) / current_price) * 100
+
+    # Farbe je nach Vorzeichen
+    delta_color = "green" if delta_pct > 0 else "red"
+    delta_arrow = "🔺" if delta_pct > 0 else "🔻"
+
+    # 📊 Plot
+    fig, ax = plt.subplots()
+    ax.plot(last_df["datetime"], last_df["close"], label="Echt", color="gray")
+    ax.plot(future_times, forecast, label="Prognose", linestyle="dashed", color="orange")
+    ax.set_title("BTC-Kurs: Rückblick & Prognose (3h)")
+    ax.set_ylabel("Preis (USDT)")
+    ax.legend()
+    st.pyplot(fig)
+
+    # 📈 Textanzeige
+    st.markdown(f"""
+        <h4>📉 Vorhersage in 3h:</h4>
+        <p style='font-size:24px; color:{delta_color};'>
+        {delta_arrow} {final_forecast:,.2f} USDT <br>
+        ({delta_pct:+.2f}% ggü. aktuell)
+        </p>
+    """, unsafe_allow_html=True)
