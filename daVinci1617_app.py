@@ -8,6 +8,7 @@ import csv
 import os
 import numpy as np
 from chart_utils import draw_price_chart
+from ml_model import BTCModelTrainer
 
 # === API-Funktion ====
 def fetch_bitget_spot_data_and_save(symbol="BTCUSDT", granularity="1h", filename="btc_bitget_7days.csv"):
@@ -97,5 +98,15 @@ if st.session_state.csv_created and os.path.exists(csv_path):
     
     
     
+    
+    
 else:
     st.info("⬆️ Bitte zuerst auf 'API-Daten abrufen' klicken.")
+
+if st.button("🎓 Modell trainieren"):
+    trainer = BTCModelTrainer()
+    model_path, status = trainer.train_model()
+    if model_path:
+        st.success(status)
+    else:
+        st.error(status)
