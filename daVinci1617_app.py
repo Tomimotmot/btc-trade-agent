@@ -10,14 +10,10 @@ import numpy as np
 from chart_utils import draw_price_chart
 from ml_model import BTCModelTrainer
 
-# === API-Funktion ====
+# === API-Funktion ===
 def fetch_bitget_spot_data_and_save(symbol="BTCUSDT", granularity="1h", filename="btc_bitget_7days.csv"):
     url = "https://api.bitget.com/api/v2/spot/market/candles"
-    params = {
-        "symbol": symbol,
-        "granularity": granularity,
-        "limit": "168"
-    }
+    params = {"symbol": symbol, "granularity": granularity, "limit": "168"}
 
     try:
         response = requests.get(url, params=params)
@@ -38,18 +34,20 @@ def fetch_bitget_spot_data_and_save(symbol="BTCUSDT", granularity="1h", filename
         for c in candles:
             ts = int(c[0])
             dt = datetime.datetime.utcfromtimestamp(ts / 1000).strftime("%Y-%m-%d %H:%M:%S")
-    
-            open_ = float(c[1])
-            high = float(c[2])
-            low = float(c[3])
-            close = float(c[4])
-            volume = float(c[5])
-    
-            writer.writerow([ts, dt, open_, high, low, close, volume])
-
+            writer.writerow([
+                ts, dt,
+                float(c[1]),  # open
+                float(c[2]),  # high
+                float(c[3]),  # low
+                float(c[4]),  # close
+                float(c[5])   # volume
+            ])
+    return path
 
 # === Streamlit App ===
 st.title("📊 DaVinci Trading App – BTC 1H Analyse")
+csv_path = "data/btc_bitget_7days.csv"
+trainer = BTCModelTrainer(csv_path=csv_path)
 
 if "csv_created" not in st.session_state:
     st.session_state.csv_created = False
@@ -57,93 +55,82 @@ if "csv_created" not in st.session_state:
 # 📥 API-Daten abrufen
 if st.button("📥 API-Daten abrufen und CSV erstellen"):
     try:
-        csv_path = fetch_bitget_spot_data_and_save()
+        path = fetch_bitget_spot_data_and_save()
         st.session_state.csv_created = True
-        st.success(f"✅ CSV erfolgreich erstellt: {csv_path}")
+        st.success(f"✅ CSV erstellt: {path}")
     except Exception as e:
         st.session_state.csv_created = False
         st.error(f"❌ Fehler: {e}")
         st.stop()
 
-# 📊 Visualisierung nur wenn CSV vorhanden
-csv_path = "data/btc_bitget_7days.csv"
+# 🔍 Daten laden und vorbereiten
 if st.session_state.csv_created and os.path.exists(csv_path):
     df = pd.read_csv(csv_path)
     df["close"] = df["close"].astype(float)
     df["volume"] = df["volume"].astype(float)
 
-    st.subheader("📄 Rohdaten")
-    st.dataframe(df)
-
     # === Technische Indikatoren ===
-    st.subheader("📐 Technische Indikatoren")
     df["ma_8"] = df["close"].rolling(window=8).mean()
     df["ma_14"] = df["close"].rolling(window=14).mean()
-
     delta = df["close"].diff()
     gain = delta.where(delta > 0, 0).rolling(window=14).mean()
     loss = -delta.where(delta < 0, 0).rolling(window=14).mean()
     rs = gain / loss
     df["rsi_14"] = 100 - (100 / (1 + rs))
-
     df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
-    
-    # Testausgabe zur Kontrolle
-    st.write("🧾 Spaltennamen:", df.columns.tolist())
-    st.dataframe(df.head())
-    
-    # Zeichnen
+
+    # 🧾 Rohdaten
+    st.subheader("📄 Rohdaten")
+    st.dataframe(df.tail(10))
+
+    # 📈 Chart
     fig = draw_price_chart(df)
     st.pyplot(fig)
-    
-    
-    
-    
-    
+
+    # 🎓 Modell trainieren
+    if st.button("🎓 Modell trainieren"):
+        model_path, status, fig = trainer.train_model()
+        if model_path:
+            st.success(status)
+            st.pyplot(fig)
+        else:
+            st.error(status)
+
+    # 🔮 Prognose anzeigen
+    if st.button("🔮 Nächste 3h prognostizieren"):
+        if not os.path.exists(trainer.model_path):
+            st.warning("⚠️ Bitte zuerst das Modell trainieren.")
+        else:
+            last_df = df.tail(20).copy()
+            forecast = trainer.predict_next_3h(last_df)
+
+            current_price = last_df["close"].iloc[-1]
+            last_time = pd.to_datetime(last_df["datetime"].iloc[-1])
+            future_times = [last_time + pd.Timedelta(hours=i+1) for i in range(3)]
+
+            final_forecast = forecast[-1]
+            delta_pct = ((final_forecast - current_price) / current_price) * 100
+
+            delta_color = "green" if delta_pct > 0 else "red"
+            delta_arrow = "🔺" if delta_pct > 0 else "🔻"
+
+            # Plot anzeigen
+            fig, ax = plt.subplots(figsize=(10, 4))
+            ax.plot(last_df["datetime"], last_df["close"], label="Echt", color="gray")
+            ax.plot(future_times, forecast, label="Prognose", linestyle="dashed", color="orange")
+            ax.set_title("BTC-Kurs: Rückblick & Prognose (nächste 3h)")
+            ax.set_ylabel("Preis (USDT)")
+            ax.legend()
+            st.pyplot(fig)
+
+            # Prognose-Text
+            st.markdown(f"""
+                <h4>📉 Prognose für in 3 Stunden:</h4>
+                <p style='font-size:24px; color:{delta_color};'>
+                {delta_arrow} {final_forecast:,.2f} USDT <br>
+                ({delta_pct:+.2f}% ggü. aktuell)
+                </p>
+            """, unsafe_allow_html=True)
+
 else:
-    st.info("⬆️ Bitte zuerst auf 'API-Daten abrufen' klicken.")
-
-if st.button("🎓 Modell trainieren"):
-    trainer = BTCModelTrainer()
-    model_path, status, fig = trainer.train_model()
-    if model_path:
-        st.success(status)
-        st.pyplot(fig)
-    else:
-        st.error(status)
-        
-        
-        
-        
-if st.button("🔮 Nächste 3h prognostizieren"):
-    last_df = df.tail(20).copy()
-    forecast = trainer.predict_next_3h(last_df)
-    current_price = last_df["close"].iloc[-1]
-    last_time = pd.to_datetime(last_df["datetime"].iloc[-1])
-    future_times = [last_time + pd.Timedelta(hours=i+1) for i in range(3)]
-
-    # Prozentänderung (von jetzt bis 3. Stunde)
-    final_forecast = forecast[-1]
-    delta_pct = ((final_forecast - current_price) / current_price) * 100
-
-    # Farbe je nach Vorzeichen
-    delta_color = "green" if delta_pct > 0 else "red"
-    delta_arrow = "🔺" if delta_pct > 0 else "🔻"
-
-    # 📊 Plot
-    fig, ax = plt.subplots()
-    ax.plot(last_df["datetime"], last_df["close"], label="Echt", color="gray")
-    ax.plot(future_times, forecast, label="Prognose", linestyle="dashed", color="orange")
-    ax.set_title("BTC-Kurs: Rückblick & Prognose (3h)")
-    ax.set_ylabel("Preis (USDT)")
-    ax.legend()
-    st.pyplot(fig)
-
-    # 📈 Textanzeige
-    st.markdown(f"""
-        <h4>📉 Vorhersage in 3h:</h4>
-        <p style='font-size:24px; color:{delta_color};'>
-        {delta_arrow} {final_forecast:,.2f} USDT <br>
-        ({delta_pct:+.2f}% ggü. aktuell)
-        </p>
-    """, unsafe_allow_html=True)
+    st.info("⬆️ Bitte zuerst CSV erstellen.")
