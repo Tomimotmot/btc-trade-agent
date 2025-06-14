@@ -105,8 +105,9 @@ else:
 
 if st.button("🎓 Modell trainieren"):
     trainer = BTCModelTrainer()
-    model_path, status = trainer.train_model()
+    model_path, status, fig = trainer.train_model()
     if model_path:
         st.success(status)
+        st.pyplot(fig)
     else:
         st.error(status)
