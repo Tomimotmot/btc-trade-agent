@@ -58,5 +58,5 @@ class BTCModelTrainer:
         plt.tight_layout()
 
         self.latest_plot = fig  # speicher Plot für Zugriff von außen
-
         return self.model_path, f"✅ Modell gespeichert: {self.model_path} — 📉 MAE: {mae:.2f} USDT ({mae_pct:.2f} %)", self.latest_plot
+        
