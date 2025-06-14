@@ -71,20 +71,32 @@ class BTCModelTrainer:
         )
 
     def predict_next_3h(self, df_recent):
+        if not os.path.exists(self.model_path):
+            raise FileNotFoundError("Modell nicht gefunden. Bitte zuerst trainieren.")
+    
         model = joblib.load(self.model_path)
-
+    
         df = df_recent.copy()
         predictions = []
-
+    
         for i in range(3):
             df["ma_8"] = df["close"].rolling(window=8).mean()
             df["ma_14"] = df["close"].rolling(window=14).mean()
+            delta = df["close"].diff()
+            gain = delta.where(delta > 0, 0).rolling(window=14).mean()
+            loss = -delta.where(delta < 0, 0).rolling(window=14).mean()
+            rs = gain / loss
+            df["rsi_14"] = 100 - (100 / (1 + rs))
+            df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
+    
             df = df.dropna()
-
-            X = df[["close", "ma_8", "ma_14"]].iloc[-1:]
+            X = df[["close", "ma_8", "ma_14", "rsi_14", "obv"]].iloc[-1:]
+    
             y_pred = model.predict(X)[0]
             predictions.append(y_pred)
+    
+            # Neue Zeile anhängen (simulierte nächste Stunde)
+            next_row = {"close": y_pred}
+            df = pd.concat([df, pd.DataFrame([next_row])], ignore_index=True)
 
-            df = pd.concat([df, pd.DataFrame([{"close": y_pred}])], ignore_index=True)
-
-        return predictions
+    return predictions
