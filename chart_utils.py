@@ -7,7 +7,7 @@ import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
 import pandas as pd
 
-def draw_price_chart_with_guides(df: pd.DataFrame, title="📈 BTC Close + MA (1H)"):
+def draw_price_chart(df: pd.DataFrame, title="📈 BTC Close + MA (1H)"):
 
     df = df.copy()
     df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
