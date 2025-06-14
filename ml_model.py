@@ -1,5 +1,3 @@
-# ml_model.py
-
 import os
 import joblib
 import numpy as np
@@ -80,6 +78,7 @@ class BTCModelTrainer:
         predictions = []
 
         for i in range(3):
+            # Technische Indikatoren berechnen
             df["ma_8"] = df["close"].rolling(window=8).mean()
             df["ma_14"] = df["close"].rolling(window=14).mean()
             delta = df["close"].diff()
@@ -89,15 +88,29 @@ class BTCModelTrainer:
             df["rsi_14"] = 100 - (100 / (1 + rs))
             df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
 
-            df = df.dropna()
-            X = df[["close", "ma_8", "ma_14", "rsi_14", "obv"]].iloc[-1:]
-            y_pred = model.predict(X)[0]
+            # Drop alle unvollständigen Zeilen
+            df = df.dropna(subset=["close", "ma_8", "ma_14", "rsi_14", "obv", "volume"])
+
+            if len(df) == 0:
+                raise ValueError("Nicht genug Daten für gültige Vorhersage.")
+
+            last_features = df[["close", "ma_8", "ma_14", "rsi_14", "obv"]].iloc[-1:].copy()
+
+            # Vorhersage
+            try:
+                y_pred = model.predict(last_features)[0]
+            except Exception as e:
+                raise ValueError(f"Fehler bei Modellvorhersage: {e}")
+
             predictions.append(y_pred)
 
-            next_row = {
-                "close": y_pred,
-                "volume": df["volume"].iloc[-1]  # Dummy-Wert zur Weiterberechnung von OBV
-            }
-            df = pd.concat([df, pd.DataFrame([next_row])], ignore_index=True)
+            # Dummy-Volume annehmen für OBV-Fortschreibung
+            df = pd.concat([
+                df,
+                pd.DataFrame([{
+                    "close": y_pred,
+                    "volume": df["volume"].iloc[-1]  # letzten Wert beibehalten
+                }])
+            ], ignore_index=True)
 
         return predictions
