@@ -46,5 +46,16 @@ class BTCModelTrainer:
 
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         joblib.dump(model, self.model_path)
+        
+        # Plot: True vs. Predicted
+        fig, ax = plt.subplots(figsize=(12, 5))
+        ax.plot(y_test.values, label="📈 Echt", color="black")
+        ax.plot(y_pred, label="🤖 Prognose", color="orange", linestyle="--")
+        ax.set_title("BTC-Kurs in 3h: Echt vs. Vorhersage")
+        ax.set_ylabel("BTC Preis (USDT)")
+        ax.legend()
+        plt.tight_layout()
 
-        return self.model_path, f"✅ Modell gespeichert: {self.model_path} — 📉 MAE: {mae:.2f} USDT"
+        self.latest_plot = fig  # speicher Plot für Zugriff von außen
+
+        return self.model_path, f"✅ Modell gespeichert: {self.model_path} — 📉 MAE: {mae:.2f} USDT ({mae_pct:.2f} %)", self.latest_plot
