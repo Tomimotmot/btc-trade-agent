@@ -6,36 +6,6 @@ import datetime
 import csv
 import os
 
-def get_bitget_historical_data(symbol="BTCUSDT", interval="1h", days=7):
-    """
-    Holt historische Candlestick-Daten von Bitget.
-
-    :param symbol: Trading-Paar, z. B. BTCUSDT
-    :param interval: Zeitintervall ('1h', '15m', etc.)
-    :param days: Anzahl vergangener Tage (Default: 7)
-    :return: Liste der Candles
-    """
-    end_time = int(time.time() * 1000)  # Jetzt in ms
-    start_time = end_time - days * 24 * 60 * 60 * 1000  # vor X Tagen
-
-    url = "https://api.bitget.com/api/v2/market/candles"
-    params = {
-        "symbol": symbol,
-        "granularity": interval,
-        "startTime": start_time,
-        "endTime": end_time
-    }
-
-    response = requests.get(url, params=params)
-    response.raise_for_status()
-    data = response.json()
-
-    if data["code"] != "00000":
-        raise Exception(f"Bitget API Fehler: {data['msg']}")
-
-    candles = sorted(data["data"], key=lambda x: int(x[0]))
-    return candles
-
 def save_to_csv(candles, filename="btc_bitget_7days.csv"):
     os.makedirs("data", exist_ok=True)
     path = os.path.join("data", filename)
@@ -46,6 +16,13 @@ def save_to_csv(candles, filename="btc_bitget_7days.csv"):
         for c in candles:
             ts = int(c[0])
             dt = datetime.datetime.utcfromtimestamp(ts / 1000).strftime("%Y-%m-%d %H:%M:%S")
-            writer.writerow([ts, dt] + c[1:])
+
+            open_ = float(c[1])
+            high = float(c[2])
+            low = float(c[3])
+            close = float(c[4])
+            volume = float(c[5])
+
+            writer.writerow([ts, dt, open_, high, low, close, volume])
 
     print(f"✅ CSV gespeichert unter: {path}")
