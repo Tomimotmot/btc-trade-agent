@@ -70,3 +70,23 @@ class BTCModelTrainer:
             f"✅ Modell gespeichert: {self.model_path} — 📉 MAE: {mae:.2f} USDT ({mae_pct:.2f} %)",
             self.latest_plot
         )
+        
+   def predict_next_3h(self, df_recent):
+    
+    model = joblib.load(self.model_path)
+
+    df = df_recent.copy()
+    predictions = []
+
+    for i in range(3):
+        df["ma_8"] = df["close"].rolling(window=8).mean()
+        df["ma_14"] = df["close"].rolling(window=14).mean()
+        df = df.dropna()
+
+        X = df[["close", "ma_8", "ma_14"]].iloc[-1:]
+        y_pred = model.predict(X)[0]
+        predictions.append(y_pred)
+
+        df = pd.concat([df, pd.DataFrame([{"close": y_pred}])], ignore_index=True)
+
+    return predictions
