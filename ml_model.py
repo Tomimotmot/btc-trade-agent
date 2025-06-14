@@ -1,25 +1,25 @@
 # ml_model.py
-
-import pandas as pd
+import os
+import joblib
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
-import matplotlib.pyplot as plt
-import joblib
-import os
 
 class BTCModelTrainer:
     def __init__(self, csv_path="data/btc_bitget_7days.csv", model_path="model/rf_btc_forecast.pkl"):
         self.csv_path = csv_path
         self.model_path = model_path
+        self.latest_plot = None
 
     def train_model(self):
         if not os.path.exists(self.csv_path):
-            return None, "❌ CSV-Datei nicht gefunden."
+            return None, "❌ CSV-Datei nicht gefunden.", None
 
         df = pd.read_csv(self.csv_path)
 
-        # Features berechnen
+        # === Feature Engineering ===
         df["ma_8"] = df["close"].rolling(window=8).mean()
         df["ma_14"] = df["close"].rolling(window=14).mean()
         delta = df["close"].diff()
@@ -28,27 +28,33 @@ class BTCModelTrainer:
         rs = gain / loss
         df["rsi_14"] = 100 - (100 / (1 + rs))
         df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
-        df["future_close"] = df["close"].shift(-3)
+        df["future_close"] = df["close"].shift(-3)  # Ziel: Preis in 3h
 
         df = df.dropna(subset=["ma_8", "ma_14", "rsi_14", "obv", "future_close"])
+
         features = ["close", "ma_8", "ma_14", "rsi_14", "obv"]
         X = df[features]
         y = df["future_close"]
 
+        # Split in Training und Test
         split_idx = int(len(df) * 0.8)
         X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
         y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
 
+        # Modell trainieren
         model = RandomForestRegressor(n_estimators=100, random_state=42)
         model.fit(X_train, y_train)
 
+        # Vorhersage und Fehlerberechnung
         y_pred = model.predict(X_test)
         mae = mean_absolute_error(y_test, y_pred)
+        mae_pct = (mae / y_test.mean()) * 100  # ✅ wichtig: y_test.mean()
 
+        # Modell speichern
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         joblib.dump(model, self.model_path)
-        
-        # Plot: True vs. Predicted
+
+        # 📊 Plot: Vorhersage vs. Wahrheit
         fig, ax = plt.subplots(figsize=(12, 5))
         ax.plot(y_test.values, label="📈 Echt", color="black")
         ax.plot(y_pred, label="🤖 Prognose", color="orange", linestyle="--")
@@ -56,12 +62,11 @@ class BTCModelTrainer:
         ax.set_ylabel("BTC Preis (USDT)")
         ax.legend()
         plt.tight_layout()
+        self.latest_plot = fig
 
-        self.latest_plot = fig  # speicher Plot für Zugriff von außen
-        
+        # ✅ Rückgabe
         return (
             self.model_path,
             f"✅ Modell gespeichert: {self.model_path} — 📉 MAE: {mae:.2f} USDT ({mae_pct:.2f} %)",
             self.latest_plot
         )
-        
