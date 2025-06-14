@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import pandas as pd
 
-def draw_price_chart_with_ma(df: pd.DataFrame, title="📈 BTC Close + MA8/MA14 (1H)"):
+def draw_price_chart(df: pd.DataFrame, title="📈 BTC Close + MA8/MA14 (1H)"):
 
     # Absicherung
     df = df.copy()
