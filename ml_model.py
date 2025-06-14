@@ -48,13 +48,13 @@ class BTCModelTrainer:
         # Vorhersage und Fehlerberechnung
         y_pred = model.predict(X_test)
         mae = mean_absolute_error(y_test, y_pred)
-        mae_pct = (mae / y_test.mean()) * 100  # ✅ wichtig: y_test.mean()
+        mae_pct = (mae / y_test.mean()) * 100
 
         # Modell speichern
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         joblib.dump(model, self.model_path)
 
-        # 📊 Plot: Vorhersage vs. Wahrheit
+        # 📊 Plot
         fig, ax = plt.subplots(figsize=(12, 5))
         ax.plot(y_test.values, label="📈 Echt", color="black")
         ax.plot(y_pred, label="🤖 Prognose", color="orange", linestyle="--")
@@ -64,29 +64,27 @@ class BTCModelTrainer:
         plt.tight_layout()
         self.latest_plot = fig
 
-        # ✅ Rückgabe
         return (
             self.model_path,
             f"✅ Modell gespeichert: {self.model_path} — 📉 MAE: {mae:.2f} USDT ({mae_pct:.2f} %)",
             self.latest_plot
         )
-        
-   def predict_next_3h(self, df_recent):
-    
-    model = joblib.load(self.model_path)
 
-    df = df_recent.copy()
-    predictions = []
+    def predict_next_3h(self, df_recent):
+        model = joblib.load(self.model_path)
 
-    for i in range(3):
-        df["ma_8"] = df["close"].rolling(window=8).mean()
-        df["ma_14"] = df["close"].rolling(window=14).mean()
-        df = df.dropna()
+        df = df_recent.copy()
+        predictions = []
 
-        X = df[["close", "ma_8", "ma_14"]].iloc[-1:]
-        y_pred = model.predict(X)[0]
-        predictions.append(y_pred)
+        for i in range(3):
+            df["ma_8"] = df["close"].rolling(window=8).mean()
+            df["ma_14"] = df["close"].rolling(window=14).mean()
+            df = df.dropna()
 
-        df = pd.concat([df, pd.DataFrame([{"close": y_pred}])], ignore_index=True)
+            X = df[["close", "ma_8", "ma_14"]].iloc[-1:]
+            y_pred = model.predict(X)[0]
+            predictions.append(y_pred)
 
-    return predictions
+            df = pd.concat([df, pd.DataFrame([{"close": y_pred}])], ignore_index=True)
+
+        return predictions
