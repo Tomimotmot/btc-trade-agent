@@ -1,4 +1,5 @@
 # ml_model.py
+
 import os
 import joblib
 import numpy as np
@@ -54,7 +55,7 @@ class BTCModelTrainer:
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         joblib.dump(model, self.model_path)
 
-        # 📊 Plot
+        # 📊 Plot: Vorhersage vs. Wahrheit
         fig, ax = plt.subplots(figsize=(12, 5))
         ax.plot(y_test.values, label="📈 Echt", color="black")
         ax.plot(y_pred, label="🤖 Prognose", color="orange", linestyle="--")
@@ -73,12 +74,11 @@ class BTCModelTrainer:
     def predict_next_3h(self, df_recent):
         if not os.path.exists(self.model_path):
             raise FileNotFoundError("Modell nicht gefunden. Bitte zuerst trainieren.")
-    
+
         model = joblib.load(self.model_path)
-    
         df = df_recent.copy()
         predictions = []
-    
+
         for i in range(3):
             df["ma_8"] = df["close"].rolling(window=8).mean()
             df["ma_14"] = df["close"].rolling(window=14).mean()
@@ -88,15 +88,16 @@ class BTCModelTrainer:
             rs = gain / loss
             df["rsi_14"] = 100 - (100 / (1 + rs))
             df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
-    
+
             df = df.dropna()
             X = df[["close", "ma_8", "ma_14", "rsi_14", "obv"]].iloc[-1:]
-    
             y_pred = model.predict(X)[0]
             predictions.append(y_pred)
-    
-            # Neue Zeile anhängen (simulierte nächste Stunde)
-            next_row = {"close": y_pred}
+
+            next_row = {
+                "close": y_pred,
+                "volume": df["volume"].iloc[-1]  # Dummy-Wert zur Weiterberechnung von OBV
+            }
             df = pd.concat([df, pd.DataFrame([next_row])], ignore_index=True)
 
-    return predictions
+        return predictions
