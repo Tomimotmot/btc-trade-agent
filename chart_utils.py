@@ -2,32 +2,32 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import pandas as pd
 
-def draw_price_chart(df: pd.DataFrame, title: str = "BTC Close-Preis"):
-    """
-    Zeichnet den BTC-Preis über Zeit.
-    Erwartet Spalten: 'datetime' (ISO-String oder datetime64) und 'close' (float).
-    """
-    df = df.copy()
 
-    # Sicherstellen, dass Spalten korrekt typisiert sind
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import pandas as pd
+
+def draw_price_chart_close_only(df: pd.DataFrame, title="📈 BTC Close-Preis (1H)"):
+    df = df.copy()
     df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
     df["close"] = pd.to_numeric(df["close"], errors="coerce")
-
-    # Ungültige Zeilen entfernen
     df = df.dropna(subset=["datetime", "close"])
 
-    # Plot erstellen
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(df["datetime"], df["close"], label="Close", color="gray")
+    fig, ax = plt.subplots(figsize=(12, 5))
+
+    ax.plot(df["datetime"], df["close"], color="#008B8B", linewidth=2, label="Close")
 
     # Formatierung
-    ax.set_title(title)
-    ax.set_xlabel("Zeit")
-    ax.set_ylabel("Preis (USDT)")
-    ax.legend()
+    ax.set_title(title, fontsize=14, fontweight="bold", loc="center")
+    ax.set_xlabel("Zeit", fontsize=12)
+    ax.set_ylabel("Preis (USDT)", fontsize=12)
 
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M'))
-    fig.autofmt_xdate()
+    ax.grid(True, linestyle="--", alpha=0.3)
+    ax.legend(loc="upper left")
+    
+    # X-Achse schöner machen
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d\n%H:%M'))
+    fig.autofmt_xdate(rotation=45)
+
     fig.tight_layout()
-
     return fig
