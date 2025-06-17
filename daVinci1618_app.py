@@ -47,56 +47,72 @@ tab1, tab2, tab3 = st.tabs(["📈 Live-Prognose", "📊 Prognose-Log", "⚙️ M
 
 with tab1:
     st.header("🔮 BTC-Prognose in 3 Stunden")
+
     if st.button("🚀 Jetzt Vorhersage starten und Log aktualisieren"):
         try:
-            # Daten holen
+            # Daten holen & vorbereiten
             csv_path = fetch_bitget_spot_data_and_save()
             trainer = BTCModelTrainer(csv_path=csv_path)
             processed_df = trainer.preview_model_data(return_full=True)
+
             if processed_df.empty:
                 st.error("❌ Keine gültigen Daten für Prognose.")
                 st.stop()
 
-            # Prognose
+            # Prognose berechnen
             last_df = processed_df.tail(50).copy()
             forecast = trainer.predict_next_3h(last_df)
             current_price = last_df["close"].iloc[-1]
             last_time = pd.to_datetime(last_df["datetime"].iloc[-1])
-            future_times = [last_time + pd.Timedelta(hours=i+1) for i in range(3)]
-            forecast_time = future_times[-1]
+            forecast_time = last_time + pd.Timedelta(hours=3)
             final_forecast = forecast[-1]
-            delta_pct = ((final_forecast - current_price) / current_price) * 100
-            delta_color = "green" if delta_pct > 0 else "red"
-            delta_arrow = "🔺" if delta_pct > 0 else "🔻"
 
-            # CSV-Log schreiben
+            # Logpfad
             log_path = "data/hourly_forecast_log.csv"
-            result_row = {
-                "forecast_timestamp": forecast_time.strftime("%Y-%m-%d %H:%M:%S"),
-                "forecast_value": final_forecast,
-                "actual_value": None,
-                "difference": None
-            }
-            file_exists = os.path.exists(log_path)
-            pd.DataFrame([result_row]).to_csv(log_path, mode="a", index=False, header=not file_exists)
+            os.makedirs("data", exist_ok=True)
+            if os.path.exists(log_path):
+                df_log = pd.read_csv(log_path)
+            else:
+                df_log = pd.DataFrame(columns=["forecast_timestamp", "forecast_value", "actual_value", "difference"])
 
-            # Alte Vorhersagen ergänzen
-            log_df = pd.read_csv(log_path)
+            # Neuen Forecast nur speichern, wenn noch nicht vorhanden
+            forecast_str = forecast_time.strftime("%Y-%m-%d %H:%M:%S")
+            if forecast_str in df_log["forecast_timestamp"].values:
+                st.info(f"ℹ️ Prognose für {forecast_str} existiert bereits.")
+            else:
+                new_row = {
+                    "forecast_timestamp": forecast_str,
+                    "forecast_value": final_forecast,
+                    "actual_value": None,
+                    "difference": None
+                }
+                df_log = pd.concat([df_log, pd.DataFrame([new_row])], ignore_index=True)
+                df_log.to_csv(log_path, index=False)
+                st.success(f"✅ Neue Prognose gespeichert für {forecast_str}")
+
+            # Alte Forecasts mit IST-Werten ergänzen
             updated = False
-            for idx, row in log_df.iterrows():
+            for idx, row in df_log.iterrows():
                 if pd.isna(row["actual_value"]):
-                    forecast_ts = pd.to_datetime(row["forecast_timestamp"])
-                    actual_row = processed_df[processed_df["datetime"] == forecast_ts.strftime("%Y-%m-%d %H:%M:%S")]
+                    ts = pd.to_datetime(row["forecast_timestamp"])
+                    actual_row = processed_df[processed_df["datetime"] == ts.strftime("%Y-%m-%d %H:%M:%S")]
                     if not actual_row.empty:
                         actual_value = actual_row["close"].values[0]
                         diff = actual_value - row["forecast_value"]
-                        log_df.at[idx, "actual_value"] = actual_value
-                        log_df.at[idx, "difference"] = diff
+                        df_log.at[idx, "actual_value"] = actual_value
+                        df_log.at[idx, "difference"] = diff
                         updated = True
-            if updated:
-                log_df.to_csv(log_path, index=False)
 
-            # ⬇️ Visualisierung
+            if updated:
+                df_log.to_csv(log_path, index=False)
+                st.success("🔁 Alte Prognosen mit IST-Werten ergänzt.")
+
+            # Visualisierung
+            delta_pct = ((final_forecast - current_price) / current_price) * 100
+            delta_color = "green" if delta_pct > 0 else "red"
+            delta_arrow = "🔺" if delta_pct > 0 else "🔻"
+            future_times = [last_time + pd.Timedelta(hours=i + 1) for i in range(3)]
+
             col1, col2, col3 = st.columns(3)
             col1.metric("Aktueller BTC-Kurs", f"{current_price:,.2f} USDT")
             col2.metric("Prognose in 3h", f"{final_forecast:,.2f} USDT", f"{delta_pct:+.2f} %")
@@ -110,7 +126,6 @@ with tab1:
             ax.legend()
             st.pyplot(fig)
 
-            st.success("✅ Prognose gespeichert und Log aktualisiert.")
         except Exception as e:
             st.error(f"❌ Fehler: {e}")
 
@@ -119,11 +134,14 @@ with tab2:
     log_path = "data/hourly_forecast_log.csv"
     if os.path.exists(log_path):
         df_log = pd.read_csv(log_path)
-        df_log["abs_diff"] = df_log["difference"].abs()
-        df_clean = df_log.dropna().sort_values("abs_diff", ascending=False)
-        st.dataframe(df_clean[["forecast_timestamp", "forecast_value", "actual_value", "difference"]].head(25))
+        if not df_log.empty:
+            df_log["abs_diff"] = df_log["difference"].abs()
+            df_clean = df_log.dropna().sort_values("forecast_timestamp", ascending=False)
+            st.dataframe(df_clean[["forecast_timestamp", "forecast_value", "actual_value", "difference"]].head(25))
+        else:
+            st.info("⚠️ Logdatei vorhanden, aber leer.")
     else:
-        st.info("Noch keine Prognosedaten vorhanden.")
+        st.info("📝 Noch keine Prognosen gespeichert.")
 
 with tab3:
     st.header("⚙️ Daten & Modell")
@@ -144,4 +162,4 @@ with tab3:
             if fig:
                 st.pyplot(fig)
     else:
-        st.warning("Bitte zuerst Prognose starten, um Daten zu erzeugen.")
+        st.warning("Bitte zuerst eine Prognose starten.")
