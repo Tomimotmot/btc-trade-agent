@@ -53,12 +53,17 @@ class BTCModelTrainer:
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         joblib.dump(model, self.model_path)
 
-        # 📊 Plot: Vorhersage vs. Wahrheit
+        # 📊 Plot: Vorhersage vs. Wahrheit mit Zeitachse (1h-Takt)
+        num_points = len(y_test)
+        start_time = pd.Timestamp("2025-01-01 00:00")  # ➤ Optional anpassen
+        time_axis = pd.date_range(start=start_time, periods=num_points, freq="1H")
+
         fig, ax = plt.subplots(figsize=(12, 5))
-        ax.plot(y_test.values, label="📈 Echt", color="black")
-        ax.plot(y_pred, label="🤖 Prognose", color="orange", linestyle="--")
+        ax.plot(time_axis, y_test.values, label="📈 Echt", color="black")
+        ax.plot(time_axis, y_pred, label="🤖 Prognose", color="orange", linestyle="--")
         ax.set_title("BTC-Kurs in 3h: Echt vs. Vorhersage")
         ax.set_ylabel("BTC Preis (USDT)")
+        ax.set_xlabel("Zeit (1h-Abstand)")
         ax.legend()
         plt.tight_layout()
         self.latest_plot = fig
