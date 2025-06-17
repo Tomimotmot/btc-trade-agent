@@ -66,7 +66,7 @@ with tab1:
             final_forecast = forecast[-1]
 
             forecast_str = forecast_time.strftime("%Y-%m-%d %H:%M:%S")
-            log_path = "data/hourly_forecast_log.csv"
+            log_path = "hourly_forecast_log.csv"
 
             df_log = pd.read_csv(log_path) if os.path.exists(log_path) else pd.DataFrame(columns=["forecast_timestamp", "forecast_value", "actual_value", "difference"])
             df_log["forecast_timestamp"] = df_log["forecast_timestamp"].astype(str)
