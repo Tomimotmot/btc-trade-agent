@@ -50,7 +50,6 @@ with tab1:
 
     if st.button("🚀 Jetzt Vorhersage starten und Log aktualisieren"):
         try:
-            # Daten holen & vorbereiten
             csv_path = fetch_bitget_spot_data_and_save()
             trainer = BTCModelTrainer(csv_path=csv_path)
             processed_df = trainer.preview_model_data(return_full=True)
@@ -59,7 +58,6 @@ with tab1:
                 st.error("❌ Keine gültigen Daten für Prognose.")
                 st.stop()
 
-            # Prognose berechnen
             last_df = processed_df.tail(50).copy()
             forecast = trainer.predict_next_3h(last_df)
             current_price = last_df["close"].iloc[-1]
@@ -67,19 +65,13 @@ with tab1:
             forecast_time = last_time + pd.Timedelta(hours=3)
             final_forecast = forecast[-1]
 
-            # Logpfad
-            log_path = "data/hourly_forecast_log.csv"
-            os.makedirs("data", exist_ok=True)
-            if os.path.exists(log_path):
-                df_log = pd.read_csv(log_path)
-            else:
-                df_log = pd.DataFrame(columns=["forecast_timestamp", "forecast_value", "actual_value", "difference"])
-
-            # Neuen Forecast nur speichern, wenn noch nicht vorhanden
             forecast_str = forecast_time.strftime("%Y-%m-%d %H:%M:%S")
-            if forecast_str in df_log["forecast_timestamp"].values:
-                st.info(f"ℹ️ Prognose für {forecast_str} existiert bereits.")
-            else:
+            log_path = "data/hourly_forecast_log.csv"
+
+            df_log = pd.read_csv(log_path) if os.path.exists(log_path) else pd.DataFrame(columns=["forecast_timestamp", "forecast_value", "actual_value", "difference"])
+            df_log["forecast_timestamp"] = df_log["forecast_timestamp"].astype(str)
+
+            if forecast_str not in df_log["forecast_timestamp"].values:
                 new_row = {
                     "forecast_timestamp": forecast_str,
                     "forecast_value": final_forecast,
@@ -89,8 +81,9 @@ with tab1:
                 df_log = pd.concat([df_log, pd.DataFrame([new_row])], ignore_index=True)
                 df_log.to_csv(log_path, index=False)
                 st.success(f"✅ Neue Prognose gespeichert für {forecast_str}")
+            else:
+                st.info(f"ℹ️ Prognose für {forecast_str} existiert bereits.")
 
-            # Alte Forecasts mit IST-Werten ergänzen
             updated = False
             for idx, row in df_log.iterrows():
                 if pd.isna(row["actual_value"]):
@@ -107,7 +100,6 @@ with tab1:
                 df_log.to_csv(log_path, index=False)
                 st.success("🔁 Alte Prognosen mit IST-Werten ergänzt.")
 
-            # Visualisierung
             delta_pct = ((final_forecast - current_price) / current_price) * 100
             delta_color = "green" if delta_pct > 0 else "red"
             delta_arrow = "🔺" if delta_pct > 0 else "🔻"
