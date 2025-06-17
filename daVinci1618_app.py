@@ -96,8 +96,8 @@ if st.session_state.csv_created and os.path.exists(csv_path):
     if st.button("🎓 Modell trainieren"):
         model_path, status, fig = trainer.train_model()
         if model_path:
-            # 📊 Datenvorschau vor dem Training
-            print(trainer.preview_model_data())
+            st.write("📊 Vorschau auf die Modell-Eingabedaten:")
+            st.dataframe(trainer.preview_model_data())
             st.success(status)
             st.pyplot(fig)
         else:
