@@ -24,17 +24,17 @@ class BTCModelTrainer:
         except Exception as e:
             st.error(f"❌ Fehler beim Einlesen der CSV: {e}")
             return pd.DataFrame()
-    
-        # Zeitspalte korrekt verarbeiten
+
+        # 📊 Zeitachse aus echten Daten übernehmen
         if "datetime" in df.columns:
             df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
         elif "timestamp" in df.columns:
-            if df["timestamp"].max() > 1e12:
-                df["datetime"] = pd.to_datetime(df["timestamp"], unit="ms")
-            else:
-                df["datetime"] = pd.to_datetime(df["timestamp"], errors="coerce")
+            df["datetime"] = pd.to_datetime(df["timestamp"], unit="ms")
         else:
             df["datetime"] = pd.date_range(start="2025-01-01 00:00", periods=len(df), freq="1H")
+        
+        time_axis = df["datetime"].iloc[split_idx:]
+
     
         # Feature Engineering
         df["ma_8"] = df["close"].rolling(window=8).mean()
