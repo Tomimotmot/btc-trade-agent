@@ -14,31 +14,29 @@ class BTCModelTrainer:
         self.latest_plot = None
 
 
-    def preview_model_data(self):
-
+    def preview_model_data(self, return_full=False):
         if not os.path.exists(self.csv_path):
             st.error(f"❌ CSV-Datei nicht gefunden: {self.csv_path}")
             return pd.DataFrame()
-
+    
         try:
             df = pd.read_csv(self.csv_path)
-            
         except Exception as e:
             st.error(f"❌ Fehler beim Einlesen der CSV: {e}")
             return pd.DataFrame()
-
-        print(df.head())
-        st.write("✅ CSV geladen, Vorschau:")
-        st.dataframe(df.head())
-
-        # Falls Zeitstempel vorhanden, umwandeln (optional)
-        if "timestamp" in df.columns:
-            df["timestamp"] = pd.to_datetime(df["timestamp"])
-        else:
-            # Künstliche Zeitachse erzeugen, falls nicht vorhanden
-            df["timestamp"] = pd.date_range(start="2025-01-01 00:00", periods=len(df), freq="1H")
     
-        # === Feature Engineering ===
+        # Zeitspalte korrekt verarbeiten
+        if "datetime" in df.columns:
+            df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
+        elif "timestamp" in df.columns:
+            if df["timestamp"].max() > 1e12:
+                df["datetime"] = pd.to_datetime(df["timestamp"], unit="ms")
+            else:
+                df["datetime"] = pd.to_datetime(df["timestamp"], errors="coerce")
+        else:
+            df["datetime"] = pd.date_range(start="2025-01-01 00:00", periods=len(df), freq="1H")
+    
+        # Feature Engineering
         df["ma_8"] = df["close"].rolling(window=8).mean()
         df["ma_14"] = df["close"].rolling(window=14).mean()
         delta = df["close"].diff()
@@ -47,16 +45,21 @@ class BTCModelTrainer:
         rs = gain / loss
         df["rsi_14"] = 100 - (100 / (1 + rs))
         df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
-        df["future_close"] = df["close"].shift(-3)  # Ziel: Preis in 3h
+        df["future_close"] = df["close"].shift(-3)
     
-        # Auswahlspalten für Vorschau
+        # Spaltenauswahl für Vorschau
         columns_to_show = [
-            "timestamp", "open", "high", "low", "close",
+            "datetime", "open", "high", "low", "close",
             "ma_8", "ma_14", "rsi_14", "obv", "future_close"
         ]
     
-        # Nur Zeilen ohne NaN in relevanten Spalten anzeigen
-        preview = df[columns_to_show].dropna().head(20)
+        df = df.dropna(subset=columns_to_show)
+    
+        if return_full:
+            return df  # komplette verarbeitete Tabelle zurückgeben
+    
+        preview = df[columns_to_show].head(20)
+        st.dataframe(preview)
         return preview
 
 
