@@ -12,6 +12,29 @@ class BTCModelTrainer:
         self.model_path = model_path
         self.latest_plot = None
 
+
+    def preview_model_data(self):
+        if not os.path.exists(self.csv_path):
+            raise FileNotFoundError("❌ CSV-Datei nicht gefunden.")
+    
+        df = pd.read_csv(self.csv_path)
+    
+        # === Feature Engineering ===
+        df["ma_8"] = df["close"].rolling(window=8).mean()
+        df["ma_14"] = df["close"].rolling(window=14).mean()
+        delta = df["close"].diff()
+        gain = delta.where(delta > 0, 0).rolling(window=14).mean()
+        loss = -delta.where(delta < 0, 0).rolling(window=14).mean()
+        rs = gain / loss
+        df["rsi_14"] = 100 - (100 / (1 + rs))
+        df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
+        df["future_close"] = df["close"].shift(-3)  # Ziel: Preis in 3h
+    
+        # Rückgabe der ersten 20 vollständig berechneten Zeilen
+        preview = df[["close", "ma_8", "ma_14", "rsi_14", "obv", "future_close"]].dropna().head(20)
+        return preview
+
+
     def train_model(self):
         if not os.path.exists(self.csv_path):
             return None, "❌ CSV-Datei nicht gefunden.", None
