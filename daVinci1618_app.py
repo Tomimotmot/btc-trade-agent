@@ -65,18 +65,13 @@ with tab1:
             forecast_time = last_time + pd.Timedelta(hours=3)
             final_forecast = forecast[-1]
 
-            # Log-Dateipfad (Hauptverzeichnis, nicht data/)
             log_path = os.path.join(os.getcwd(), "hourly_forecast_log.csv")
-            file_exists = os.path.isfile(log_path)
-
-            # Log-Datei laden oder neue leere Tabelle
-            if file_exists:
+            if os.path.exists(log_path):
                 df_log = pd.read_csv(log_path)
                 df_log["forecast_timestamp"] = pd.to_datetime(df_log["forecast_timestamp"], errors="coerce")
             else:
                 df_log = pd.DataFrame(columns=["forecast_timestamp", "forecast_value", "actual_value", "difference"])
 
-            # Prognose eintragen (falls noch nicht vorhanden)
             if not (df_log["forecast_timestamp"] == forecast_time).any():
                 new_row = {
                     "forecast_timestamp": forecast_time,
@@ -90,7 +85,6 @@ with tab1:
             else:
                 st.info(f"ℹ️ Prognose für {forecast_time} existiert bereits.")
 
-            # Alte Prognosen nachtragen (wenn jetzt tatsächlicher Kurs bekannt ist)
             updated = False
             for idx, row in df_log.iterrows():
                 if pd.isna(row["actual_value"]):
@@ -107,7 +101,6 @@ with tab1:
                 df_log.to_csv(log_path, index=False)
                 st.success("🔁 Alte Prognosen mit IST-Werten ergänzt.")
 
-            # Visualisierung
             delta_pct = ((final_forecast - current_price) / current_price) * 100
             future_times = [last_time + pd.Timedelta(hours=i + 1) for i in range(3)]
 
