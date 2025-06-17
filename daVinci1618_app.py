@@ -66,8 +66,12 @@ with tab1:
             final_forecast = forecast[-1]
 
             log_path = "hourly_forecast_log.csv"
-            df_log = pd.read_csv(log_path)
-            df_log["forecast_timestamp"] = pd.to_datetime(df_log["forecast_timestamp"])
+            if os.path.exists(log_path):
+                df_log = pd.read_csv(log_path)
+            else:
+                df_log = pd.DataFrame(columns=["forecast_timestamp", "forecast_value", "actual_value", "difference"])
+
+            df_log["forecast_timestamp"] = pd.to_datetime(df_log["forecast_timestamp"], errors='coerce')
 
             if forecast_time not in df_log["forecast_timestamp"].values:
                 new_row = {
