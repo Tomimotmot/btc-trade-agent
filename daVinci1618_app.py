@@ -11,12 +11,6 @@ import numpy as np
 from utils.chart_utils import draw_price_chart
 from utils.ml_model import BTCModelTrainer
 
-
-import streamlit as st
-from utils.ml_model import BTCModelTrainer
-from utils.api import fetch_bitget_spot_data_and_save  # importiere deine API-Funktion
-import datetime
-
 st.title("DaVinci 1.618 CryptoTrader")
 
 # 1. API-Daten abrufen
