@@ -3,6 +3,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import streamlit as st
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
 
@@ -11,6 +12,55 @@ class BTCModelTrainer:
         self.csv_path = csv_path
         self.model_path = model_path
         self.latest_plot = None
+
+
+    def preview_model_data(self, return_full=False):
+        if not os.path.exists(self.csv_path):
+            st.error(f"❌ CSV-Datei nicht gefunden: {self.csv_path}")
+            return pd.DataFrame()
+    
+        try:
+            df = pd.read_csv(self.csv_path)
+        except Exception as e:
+            st.error(f"❌ Fehler beim Einlesen der CSV: {e}")
+            return pd.DataFrame()
+    
+        # Zeitspalte korrekt verarbeiten
+        if "datetime" in df.columns:
+            df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
+        elif "timestamp" in df.columns:
+            if df["timestamp"].max() > 1e12:
+                df["datetime"] = pd.to_datetime(df["timestamp"], unit="ms")
+            else:
+                df["datetime"] = pd.to_datetime(df["timestamp"], errors="coerce")
+        else:
+            df["datetime"] = pd.date_range(start="2025-01-01 00:00", periods=len(df), freq="1H")
+    
+        # Feature Engineering
+        df["ma_8"] = df["close"].rolling(window=8).mean()
+        df["ma_14"] = df["close"].rolling(window=14).mean()
+        delta = df["close"].diff()
+        gain = delta.where(delta > 0, 0).rolling(window=14).mean()
+        loss = -delta.where(delta < 0, 0).rolling(window=14).mean()
+        rs = gain / loss
+        df["rsi_14"] = 100 - (100 / (1 + rs))
+        df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
+        df["future_close"] = df["close"].shift(-3)
+    
+        # Spaltenauswahl für Vorschau
+        columns_to_show = [
+            "datetime", "open", "high", "low", "close",
+            "ma_8", "ma_14", "rsi_14", "obv", "future_close"
+        ]
+    
+        df = df.dropna(subset=columns_to_show)
+    
+        if return_full:
+            return df  # komplette verarbeitete Tabelle zurückgeben
+    
+        preview = df[columns_to_show].head(20)
+        return preview
+
 
     def train_model(self):
         if not os.path.exists(self.csv_path):
@@ -53,12 +103,17 @@ class BTCModelTrainer:
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         joblib.dump(model, self.model_path)
 
-        # 📊 Plot: Vorhersage vs. Wahrheit
+        # 📊 Plot: Vorhersage vs. Wahrheit mit Zeitachse (1h-Takt)
+        num_points = len(y_test)
+        start_time = pd.Timestamp("2025-01-01 00:00")  # ➤ Optional anpassen
+        time_axis = pd.date_range(start=start_time, periods=num_points, freq="1H")
+
         fig, ax = plt.subplots(figsize=(12, 5))
-        ax.plot(y_test.values, label="📈 Echt", color="black")
-        ax.plot(y_pred, label="🤖 Prognose", color="orange", linestyle="--")
+        ax.plot(time_axis, y_test.values, label="📈 Echt", color="black")
+        ax.plot(time_axis, y_pred, label="🤖 Prognose", color="orange", linestyle="--")
         ax.set_title("BTC-Kurs in 3h: Echt vs. Vorhersage")
         ax.set_ylabel("BTC Preis (USDT)")
+        ax.set_xlabel("Zeit (1h-Abstand)")
         ax.legend()
         plt.tight_layout()
         self.latest_plot = fig
