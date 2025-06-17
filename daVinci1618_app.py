@@ -13,38 +13,6 @@ from utils.ml_model import BTCModelTrainer
 
 st.title("DaVinci 1.618 CryptoTrader")
 
-# 1. API-Daten abrufen
-if st.button("📥 API-Daten abrufen und CSV erstellen"):
-    try:
-        path = fetch_bitget_spot_data_and_save()
-        st.session_state.csv_created = True
-        st.session_state.csv_path = path  # neuen Pfad merken
-        st.success(f"✅ CSV erstellt: {path}")
-    except Exception as e:
-        st.session_state.csv_created = False
-        st.error(f"❌ Fehler: {e}")
-        st.stop()
-
-# 2. Datenvorschau (nach API oder bei vorhandenem CSV)
-csv_path = st.session_state.get("csv_path", "data/btc_bitget_7days.csv")
-trainer = BTCModelTrainer(csv_path=csv_path)
-
-if st.button("🔍 Vorschau auf Trainingsdaten"):
-    preview = trainer.preview_model_data()
-    if not preview.empty:
-        st.dataframe(preview)
-    else:
-        st.warning("⚠️ Keine Daten zum Anzeigen.")
-
-# 3. Modell trainieren
-if st.button("🤖 Modell trainieren"):
-    model_path, info, fig = trainer.train_model()
-    st.success(info)
-    if fig:
-        st.pyplot(fig)
-
-
-
 # === API-Funktion ===
 def fetch_bitget_spot_data_and_save(symbol="BTCUSDT", granularity="1h", filename="btc_bitget_7days.csv"):
     url = "https://api.bitget.com/api/v2/spot/market/candles"
@@ -78,3 +46,33 @@ def fetch_bitget_spot_data_and_save(symbol="BTCUSDT", granularity="1h", filename
                 float(c[5])   # volume
             ])
     return path
+
+# 1. API-Daten abrufen
+if st.button("📥 API-Daten abrufen und CSV erstellen"):
+    try:
+        path = fetch_bitget_spot_data_and_save()
+        st.session_state.csv_created = True
+        st.session_state.csv_path = path  # neuen Pfad merken
+        st.success(f"✅ CSV erstellt: {path}")
+    except Exception as e:
+        st.session_state.csv_created = False
+        st.error(f"❌ Fehler: {e}")
+        st.stop()
+
+# 2. Datenvorschau (nach API oder bei vorhandenem CSV)
+csv_path = st.session_state.get("csv_path", "data/btc_bitget_7days.csv")
+trainer = BTCModelTrainer(csv_path=csv_path)
+
+if st.button("🔍 Vorschau auf Trainingsdaten"):
+    preview = trainer.preview_model_data()
+    if not preview.empty:
+        st.dataframe(preview)
+    else:
+        st.warning("⚠️ Keine Daten zum Anzeigen.")
+
+# 3. Modell trainieren
+if st.button("🤖 Modell trainieren"):
+    model_path, info, fig = trainer.train_model()
+    st.success(info)
+    if fig:
+        st.pyplot(fig)
