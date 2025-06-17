@@ -68,10 +68,12 @@ with tab1:
             forecast_str = forecast_time.strftime("%Y-%m-%d %H:%M:%S")
             log_path = "hourly_forecast_log.csv"
 
-            df_log = pd.read_csv(log_path) if os.path.exists(log_path) else pd.DataFrame(columns=["forecast_timestamp", "forecast_value", "actual_value", "difference"])
-            df_log["forecast_timestamp"] = df_log["forecast_timestamp"].astype(str)
+            if os.path.exists(log_path):
+                df_log = pd.read_csv(log_path, dtype={"forecast_timestamp": str})
+            else:
+                df_log = pd.DataFrame(columns=["forecast_timestamp", "forecast_value", "actual_value", "difference"])
 
-            if forecast_str not in df_log["forecast_timestamp"].values:
+            if forecast_str not in df_log["forecast_timestamp"].astype(str).values:
                 new_row = {
                     "forecast_timestamp": forecast_str,
                     "forecast_value": final_forecast,
@@ -123,7 +125,7 @@ with tab1:
 
 with tab2:
     st.header("📊 Prognose-Log")
-    log_path = "data/hourly_forecast_log.csv"
+    log_path = "hourly_forecast_log.csv"
     if os.path.exists(log_path):
         df_log = pd.read_csv(log_path)
         if not df_log.empty:
