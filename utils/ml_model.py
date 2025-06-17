@@ -13,26 +13,39 @@ class BTCModelTrainer:
         self.latest_plot = None
 
 
-    def preview_model_data(self):
-        if not os.path.exists(self.csv_path):
-            raise FileNotFoundError("❌ CSV-Datei nicht gefunden.")
+def preview_model_data(self):
+    if not os.path.exists(self.csv_path):
+        raise FileNotFoundError("❌ CSV-Datei nicht gefunden.")
     
-        df = pd.read_csv(self.csv_path)
-    
-        # === Feature Engineering ===
-        df["ma_8"] = df["close"].rolling(window=8).mean()
-        df["ma_14"] = df["close"].rolling(window=14).mean()
-        delta = df["close"].diff()
-        gain = delta.where(delta > 0, 0).rolling(window=14).mean()
-        loss = -delta.where(delta < 0, 0).rolling(window=14).mean()
-        rs = gain / loss
-        df["rsi_14"] = 100 - (100 / (1 + rs))
-        df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
-        df["future_close"] = df["close"].shift(-3)  # Ziel: Preis in 3h
-    
-        # Rückgabe der ersten 20 vollständig berechneten Zeilen
-        preview = df[["close", "ma_8", "ma_14", "rsi_14", "obv", "future_close"]].dropna().head(20)
-        return preview
+    df = pd.read_csv(self.csv_path)
+
+    # Falls Zeitstempel vorhanden, umwandeln (optional)
+    if "timestamp" in df.columns:
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
+    else:
+        # Künstliche Zeitachse erzeugen, falls nicht vorhanden
+        df["timestamp"] = pd.date_range(start="2025-01-01 00:00", periods=len(df), freq="1H")
+
+    # === Feature Engineering ===
+    df["ma_8"] = df["close"].rolling(window=8).mean()
+    df["ma_14"] = df["close"].rolling(window=14).mean()
+    delta = df["close"].diff()
+    gain = delta.where(delta > 0, 0).rolling(window=14).mean()
+    loss = -delta.where(delta < 0, 0).rolling(window=14).mean()
+    rs = gain / loss
+    df["rsi_14"] = 100 - (100 / (1 + rs))
+    df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
+    df["future_close"] = df["close"].shift(-3)  # Ziel: Preis in 3h
+
+    # Auswahlspalten für Vorschau
+    columns_to_show = [
+        "timestamp", "open", "high", "low", "close",
+        "ma_8", "ma_14", "rsi_14", "obv", "future_close"
+    ]
+
+    # Nur Zeilen ohne NaN in relevanten Spalten anzeigen
+    preview = df[columns_to_show].dropna().head(20)
+    return preview
 
 
     def train_model(self):
