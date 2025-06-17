@@ -18,11 +18,11 @@ def draw_price_chart(df: pd.DataFrame, title="📈 BTC Close + MA (1H)"):
     df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
     df["close"] = pd.to_numeric(df["close"], errors="coerce")
 
-    # RSI berechnen, falls noch nicht vorhanden
+    # RSI berechnen
     if "rsi_14" not in df.columns:
         df["rsi_14"] = compute_rsi(df["close"], window=14)
 
-    # MA berechnen, falls noch nicht vorhanden
+    # MA berechnen
     if "ma_8" not in df.columns:
         df["ma_8"] = df["close"].rolling(window=8).mean()
     if "ma_14" not in df.columns:
