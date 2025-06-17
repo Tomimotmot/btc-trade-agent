@@ -7,8 +7,8 @@ import datetime
 import csv
 import os
 import numpy as np
-from chart_utils import draw_price_chart
-from ml_model import BTCModelTrainer
+from utils.chart_utils import draw_price_chart
+from utils.ml_model import BTCModelTrainer
 
 # === API-Funktion ===
 def fetch_bitget_spot_data_and_save(symbol="BTCUSDT", granularity="1h", filename="btc_bitget_7days.csv"):
