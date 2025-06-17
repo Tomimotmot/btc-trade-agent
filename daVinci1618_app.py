@@ -6,7 +6,6 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import requests
 import datetime
-import time
 import csv
 from pathlib import Path
 from utils.ml_model import BTCModelTrainer
@@ -48,16 +47,6 @@ def fetch_bitget_spot_data_and_save(symbol="BTCUSDT", granularity="1h", filename
 tab1, tab2, tab3 = st.tabs(["📈 Live-Prognose", "📊 Prognose-Log", "⚙️ Modell & Daten"])
 
 with tab1:
-
-    if st.button("🧪 TEST: Log schreiben"):
-        try:
-            log_path = Path(__file__).resolve().parent / "hourly_forecast_log.csv"
-            with open(log_path, "a") as f:
-                f.write(f"{datetime.datetime.utcnow()},12345.67,,\n")
-            st.success(f"✅ Testzeile geschrieben nach: {log_path}")
-        except Exception as e:
-            st.error(f"❌ Fehler beim Schreiben: {e}")
-    
     st.header("🔮 BTC-Prognose in 3 Stunden")
 
     if st.button("🚀 Jetzt Vorhersage starten und Log aktualisieren"):
@@ -77,40 +66,27 @@ with tab1:
             forecast_time = last_time + pd.Timedelta(hours=3)
             final_forecast = forecast[-1]
 
-            log_path = Path(__file__).resolve().parent / "hourly_forecast_log.csv"
+            # Logging vorbereiten
+            log_path = Path(__file__).resolve().parent / "data" / "hourly_forecast_log.csv"
+            log_path.parent.mkdir(exist_ok=True)
 
-            log_exists = log_path.exists()
-            if log_exists:
-                df_log = pd.read_csv(log_path, parse_dates=["forecast_timestamp"], dayfirst=False)
+            # Neue Zeile vorbereiten
+            forecast_time_str = forecast_time.strftime("%Y-%m-%d %H:%M:%S")
+            row_str = f"{forecast_time_str},{final_forecast},,"  # actual + diff leer
+
+            if not log_path.exists():
+                with open(log_path, "w") as f:
+                    f.write("forecast_timestamp,forecast_value,actual_value,difference\n")
+                    f.write(row_str + "\n")
+                    st.success(f"✅ Neue Prognose gespeichert für {forecast_time_str} (neu)")
             else:
-                df_log = pd.DataFrame(columns=["forecast_timestamp", "forecast_value", "actual_value", "difference"])
-
-            already_logged = df_log["forecast_timestamp"].astype(str).eq(str(forecast_time)).any()
-
-            if not already_logged:
-                with open(log_path, mode="a" if log_exists else "w", newline="") as f:
-                    writer = csv.writer(f)
-                    if not log_exists:
-                        writer.writerow(["forecast_timestamp", "forecast_value", "actual_value", "difference"])
-                    writer.writerow([forecast_time, final_forecast, "", ""])
-                st.success(f"✅ Neue Prognose gespeichert für {forecast_time}")
-            else:
-                st.info(f"ℹ️ Prognose für {forecast_time} existiert bereits.")
-
-            updated = False
-            for idx, row in df_log.iterrows():
-                if pd.isna(row["actual_value"]):
-                    ts = row["forecast_timestamp"]
-                    actual_row = processed_df[processed_df["datetime"] == ts.strftime("%Y-%m-%d %H:%M:%S")]
-                    if not actual_row.empty:
-                        actual_value = actual_row["close"].values[0]
-                        diff = actual_value - row["forecast_value"]
-                        df_log.at[idx, "actual_value"] = actual_value
-                        df_log.at[idx, "difference"] = diff
-                        updated = True
-            if updated:
-                df_log.to_csv(log_path, index=False)
-                st.success("🔁 Alte Prognosen mit IST-Werten ergänzt.")
+                existing = Path(log_path).read_text()
+                if forecast_time_str not in existing:
+                    with open(log_path, "a") as f:
+                        f.write(row_str + "\n")
+                    st.success(f"✅ Neue Prognose gespeichert für {forecast_time_str} (append)")
+                else:
+                    st.info(f"ℹ️ Prognose für {forecast_time_str} existiert bereits.")
 
             delta_pct = ((final_forecast - current_price) / current_price) * 100
             future_times = [last_time + pd.Timedelta(hours=i + 1) for i in range(3)]
@@ -133,7 +109,7 @@ with tab1:
 
 with tab2:
     st.header("📊 Prognose-Log")
-    log_path = Path(__file__).resolve().parent / "hourly_forecast_log.csv"
+    log_path = Path(__file__).resolve().parent / "data" / "hourly_forecast_log.csv"
     if log_path.exists():
         df_log = pd.read_csv(log_path)
         if not df_log.empty:
