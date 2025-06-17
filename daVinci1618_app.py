@@ -89,7 +89,7 @@ if st.button("🔮 Nächste 3h prognostizieren"):
             st.error("❌ Keine gültigen Daten für Prognose.")
             st.stop()
 
-        last_df = processed_df.tail(20).copy()
+        last_df = processed_df.tail(50).copy()
         forecast = trainer.predict_next_3h(last_df)
 
         current_price = last_df["close"].iloc[-1]
