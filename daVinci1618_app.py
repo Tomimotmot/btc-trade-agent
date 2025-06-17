@@ -6,6 +6,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import requests
 import datetime
+import time
 import csv
 from pathlib import Path
 from utils.ml_model import BTCModelTrainer
@@ -47,6 +48,16 @@ def fetch_bitget_spot_data_and_save(symbol="BTCUSDT", granularity="1h", filename
 tab1, tab2, tab3 = st.tabs(["📈 Live-Prognose", "📊 Prognose-Log", "⚙️ Modell & Daten"])
 
 with tab1:
+
+    if st.button("🧪 TEST: Log schreiben"):
+        try:
+            log_path = Path(__file__).resolve().parent / "hourly_forecast_log.csv"
+            with open(log_path, "a") as f:
+                f.write(f"{datetime.datetime.utcnow()},12345.67,,\n")
+            st.success(f"✅ Testzeile geschrieben nach: {log_path}")
+        except Exception as e:
+            st.error(f"❌ Fehler beim Schreiben: {e}")
+    
     st.header("🔮 BTC-Prognose in 3 Stunden")
 
     if st.button("🚀 Jetzt Vorhersage starten und Log aktualisieren"):
