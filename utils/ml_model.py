@@ -107,23 +107,20 @@ class BTCModelTrainer:
 
         model = joblib.load(self.model_path)
         df = df_recent.copy()
+
+        if len(df) < 30:
+            raise ValueError("Mindestens 30 Zeilen werden empfohlen für stabile Vorhersage.")
+
         predictions = []
-
         for _ in range(3):
-            df["ma_8"] = df["close"].rolling(window=8).mean()
-            df["ma_14"] = df["close"].rolling(window=14).mean()
-            delta = df["close"].diff()
-            gain = delta.where(delta > 0, 0).rolling(window=14).mean()
-            loss = -delta.where(delta < 0, 0).rolling(window=14).mean()
-            rs = gain / loss
-            df["rsi_14"] = 100 - (100 / (1 + rs))
-            df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
-
+            df = self._add_features(df)
             df = df.dropna(subset=["close", "ma_8", "ma_14", "rsi_14", "obv", "volume"])
+
             if df.empty:
-                raise ValueError("Nicht genug Daten für gültige Vorhersage.")
+                raise ValueError("Nicht genug gültige Daten für Vorhersage.")
 
             last_features = df[["close", "ma_8", "ma_14", "rsi_14", "obv"]].iloc[-1:]
+
             try:
                 y_pred = model.predict(last_features)[0]
             except Exception as e:
