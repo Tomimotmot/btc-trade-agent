@@ -68,12 +68,10 @@ with tab1:
             forecast_str = forecast_time.strftime("%Y-%m-%d %H:%M:%S")
             log_path = "hourly_forecast_log.csv"
 
-            if os.path.exists(log_path):
-                df_log = pd.read_csv(log_path, dtype={"forecast_timestamp": str})
-            else:
-                df_log = pd.DataFrame(columns=["forecast_timestamp", "forecast_value", "actual_value", "difference"])
+            df_log = pd.read_csv(log_path)
+            df_log["forecast_timestamp"] = pd.to_datetime(df_log["forecast_timestamp"]).dt.strftime("%Y-%m-%d %H:%M:%S")
 
-            if forecast_str not in df_log["forecast_timestamp"].astype(str).values:
+            if forecast_str not in df_log["forecast_timestamp"].values:
                 new_row = {
                     "forecast_timestamp": forecast_str,
                     "forecast_value": final_forecast,
@@ -103,8 +101,6 @@ with tab1:
                 st.success("🔁 Alte Prognosen mit IST-Werten ergänzt.")
 
             delta_pct = ((final_forecast - current_price) / current_price) * 100
-            delta_color = "green" if delta_pct > 0 else "red"
-            delta_arrow = "🔺" if delta_pct > 0 else "🔻"
             future_times = [last_time + pd.Timedelta(hours=i + 1) for i in range(3)]
 
             col1, col2, col3 = st.columns(3)
