@@ -68,39 +68,38 @@ with tab1:
 
             log_path = Path(__file__).resolve().parent / "hourly_forecast_log.csv"
 
-            new_row_df = pd.DataFrame([{
-                "forecast_timestamp": forecast_time,
-                "forecast_value": final_forecast,
-                "actual_value": None,
-                "difference": None
-            }])
+            log_exists = log_path.exists()
+            if log_exists:
+                df_log = pd.read_csv(log_path, parse_dates=["forecast_timestamp"], dayfirst=False)
+            else:
+                df_log = pd.DataFrame(columns=["forecast_timestamp", "forecast_value", "actual_value", "difference"])
 
-            if not log_path.exists():
-                new_row_df.to_csv(log_path, index=False)
+            already_logged = df_log["forecast_timestamp"].astype(str).eq(str(forecast_time)).any()
+
+            if not already_logged:
+                with open(log_path, mode="a" if log_exists else "w", newline="") as f:
+                    writer = csv.writer(f)
+                    if not log_exists:
+                        writer.writerow(["forecast_timestamp", "forecast_value", "actual_value", "difference"])
+                    writer.writerow([forecast_time, final_forecast, "", ""])
                 st.success(f"✅ Neue Prognose gespeichert für {forecast_time}")
             else:
-                df_log = pd.read_csv(log_path, parse_dates=["forecast_timestamp"], dayfirst=False)
-                if not (df_log["forecast_timestamp"] == forecast_time).any():
-                    new_row_df.to_csv(log_path, mode="a", header=False, index=False)
-                    st.success(f"✅ Neue Prognose gespeichert für {forecast_time}")
-                else:
-                    st.info(f"ℹ️ Prognose für {forecast_time} existiert bereits.")
+                st.info(f"ℹ️ Prognose für {forecast_time} existiert bereits.")
 
-                # Alte Forecasts ergänzen
-                updated = False
-                for idx, row in df_log.iterrows():
-                    if pd.isna(row["actual_value"]):
-                        ts = row["forecast_timestamp"]
-                        actual_row = processed_df[processed_df["datetime"] == ts.strftime("%Y-%m-%d %H:%M:%S")]
-                        if not actual_row.empty:
-                            actual_value = actual_row["close"].values[0]
-                            diff = actual_value - row["forecast_value"]
-                            df_log.at[idx, "actual_value"] = actual_value
-                            df_log.at[idx, "difference"] = diff
-                            updated = True
-                if updated:
-                    df_log.to_csv(log_path, index=False)
-                    st.success("🔁 Alte Prognosen mit IST-Werten ergänzt.")
+            updated = False
+            for idx, row in df_log.iterrows():
+                if pd.isna(row["actual_value"]):
+                    ts = row["forecast_timestamp"]
+                    actual_row = processed_df[processed_df["datetime"] == ts.strftime("%Y-%m-%d %H:%M:%S")]
+                    if not actual_row.empty:
+                        actual_value = actual_row["close"].values[0]
+                        diff = actual_value - row["forecast_value"]
+                        df_log.at[idx, "actual_value"] = actual_value
+                        df_log.at[idx, "difference"] = diff
+                        updated = True
+            if updated:
+                df_log.to_csv(log_path, index=False)
+                st.success("🔁 Alte Prognosen mit IST-Werten ergänzt.")
 
             delta_pct = ((final_forecast - current_price) / current_price) * 100
             future_times = [last_time + pd.Timedelta(hours=i + 1) for i in range(3)]
