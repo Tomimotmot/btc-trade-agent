@@ -113,9 +113,10 @@ if st.button("🔮 Nächste 3h prognostizieren"):
 
         # Prognose-Text
         st.markdown(f"""
-            <h4>📉 Prognose für in 3 Stunden:</h4>
-            <p style='font-size:24px; color:{delta_color};'>
-            {delta_arrow} {final_forecast:,.2f} USDT <br>
-            ({delta_pct:+.2f}% ggü. aktuell)
+            <h4>📊 Prognose in 3 Stunden:</h4>
+            <p style='font-size:20px;'>
+            Aktueller Kurs: <b>{current_price:,.2f} USDT</b><br>
+            Prognose: <b style='color:{delta_color};'>{delta_arrow} {final_forecast:,.2f} USDT</b><br>
+            Änderung: <span style='color:{delta_color};'>{delta_pct:+.2f}%</span> gegenüber jetzt
             </p>
         """, unsafe_allow_html=True)
