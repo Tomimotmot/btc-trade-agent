@@ -17,7 +17,9 @@ class BTCModelTrainer:
         if not os.path.exists(self.csv_path):
             raise FileNotFoundError("❌ CSV-Datei nicht gefunden.")
         
+        print(df.head())
         df = pd.read_csv(self.csv_path)
+        
     
         # Falls Zeitstempel vorhanden, umwandeln (optional)
         if "timestamp" in df.columns:
