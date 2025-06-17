@@ -1,3 +1,5 @@
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
@@ -5,7 +7,6 @@ import requests
 import time
 import datetime
 import csv
-import os
 import numpy as np
 from utils.chart_utils import draw_price_chart
 from utils.ml_model import BTCModelTrainer
