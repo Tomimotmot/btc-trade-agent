@@ -65,29 +65,27 @@ with tab1:
             forecast_time = last_time + pd.Timedelta(hours=3)
             final_forecast = forecast[-1]
 
-            forecast_str = forecast_time.strftime("%Y-%m-%d %H:%M:%S")
             log_path = "hourly_forecast_log.csv"
-
             df_log = pd.read_csv(log_path)
-            df_log["forecast_timestamp"] = pd.to_datetime(df_log["forecast_timestamp"]).dt.strftime("%Y-%m-%d %H:%M:%S")
+            df_log["forecast_timestamp"] = pd.to_datetime(df_log["forecast_timestamp"])
 
-            if forecast_str not in df_log["forecast_timestamp"].values:
+            if forecast_time not in df_log["forecast_timestamp"].values:
                 new_row = {
-                    "forecast_timestamp": forecast_str,
+                    "forecast_timestamp": forecast_time,
                     "forecast_value": final_forecast,
                     "actual_value": None,
                     "difference": None
                 }
                 df_log = pd.concat([df_log, pd.DataFrame([new_row])], ignore_index=True)
                 df_log.to_csv(log_path, index=False)
-                st.success(f"✅ Neue Prognose gespeichert für {forecast_str}")
+                st.success(f"✅ Neue Prognose gespeichert für {forecast_time}")
             else:
-                st.info(f"ℹ️ Prognose für {forecast_str} existiert bereits.")
+                st.info(f"ℹ️ Prognose für {forecast_time} existiert bereits.")
 
             updated = False
             for idx, row in df_log.iterrows():
                 if pd.isna(row["actual_value"]):
-                    ts = pd.to_datetime(row["forecast_timestamp"])
+                    ts = row["forecast_timestamp"]
                     actual_row = processed_df[processed_df["datetime"] == ts.strftime("%Y-%m-%d %H:%M:%S")]
                     if not actual_row.empty:
                         actual_value = actual_row["close"].values[0]
