@@ -59,7 +59,6 @@ class BTCModelTrainer:
             return df  # komplette verarbeitete Tabelle zurückgeben
     
         preview = df[columns_to_show].head(20)
-        st.dataframe(preview)
         return preview
 
 
