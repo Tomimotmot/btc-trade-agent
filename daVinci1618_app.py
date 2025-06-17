@@ -63,34 +63,35 @@ with tab1:
             current_price = last_df["close"].iloc[-1]
             last_time = pd.to_datetime(last_df["datetime"].iloc[-1])
             forecast_time = last_time + pd.Timedelta(hours=3)
+            forecast_str = forecast_time.strftime("%Y-%m-%d %H:%M:%S")
             final_forecast = forecast[-1]
 
             log_path = "hourly_forecast_log.csv"
             if os.path.exists(log_path):
-                df_log = pd.read_csv(log_path)
+                df_log = pd.read_csv(log_path, dtype={"forecast_timestamp": str})
             else:
                 df_log = pd.DataFrame(columns=["forecast_timestamp", "forecast_value", "actual_value", "difference"])
 
-            df_log["forecast_timestamp"] = pd.to_datetime(df_log["forecast_timestamp"], errors='coerce')
-
-            if forecast_time not in df_log["forecast_timestamp"].values:
+            # Vergleich als String statt datetime
+            if forecast_str not in df_log["forecast_timestamp"].values:
                 new_row = {
-                    "forecast_timestamp": forecast_time,
+                    "forecast_timestamp": forecast_str,
                     "forecast_value": final_forecast,
                     "actual_value": None,
                     "difference": None
                 }
                 df_log = pd.concat([df_log, pd.DataFrame([new_row])], ignore_index=True)
                 df_log.to_csv(log_path, index=False)
-                st.success(f"✅ Neue Prognose gespeichert für {forecast_time}")
+                st.success(f"✅ Neue Prognose gespeichert für {forecast_str}")
             else:
-                st.info(f"ℹ️ Prognose für {forecast_time} existiert bereits.")
+                st.info(f"ℹ️ Prognose für {forecast_str} existiert bereits.")
 
+            # Alte Forecasts aktualisieren
             updated = False
             for idx, row in df_log.iterrows():
                 if pd.isna(row["actual_value"]):
-                    ts = row["forecast_timestamp"]
-                    actual_row = processed_df[processed_df["datetime"] == ts.strftime("%Y-%m-%d %H:%M:%S")]
+                    ts_str = row["forecast_timestamp"]
+                    actual_row = processed_df[processed_df["datetime"] == ts_str]
                     if not actual_row.empty:
                         actual_value = actual_row["close"].values[0]
                         diff = actual_value - row["forecast_value"]
