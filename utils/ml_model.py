@@ -14,13 +14,22 @@ class BTCModelTrainer:
 
 
     def preview_model_data(self):
+
         if not os.path.exists(self.csv_path):
-            raise FileNotFoundError("❌ CSV-Datei nicht gefunden.")
-        
+            st.error(f"❌ CSV-Datei nicht gefunden: {self.csv_path}")
+            return pd.DataFrame()
+
+        try:
+            df = pd.read_csv(self.csv_path)
+            
+        except Exception as e:
+            st.error(f"❌ Fehler beim Einlesen der CSV: {e}")
+            return pd.DataFrame()
+
         print(df.head())
-        df = pd.read_csv(self.csv_path)
-        
-    
+        st.write("✅ CSV geladen, Vorschau:")
+        st.dataframe(df.head())
+
         # Falls Zeitstempel vorhanden, umwandeln (optional)
         if "timestamp" in df.columns:
             df["timestamp"] = pd.to_datetime(df["timestamp"])
