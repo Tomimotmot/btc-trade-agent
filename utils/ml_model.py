@@ -13,6 +13,18 @@ class BTCModelTrainer:
         self.model_path = model_path
         self.latest_plot = None
 
+    def _add_features(self, df):
+        df = df.copy()
+        df["ma_8"] = df["close"].rolling(window=8).mean()
+        df["ma_14"] = df["close"].rolling(window=14).mean()
+        delta = df["close"].diff()
+        gain = delta.where(delta > 0, 0).rolling(window=14).mean()
+        loss = -delta.where(delta < 0, 0).rolling(window=14).mean()
+        rs = gain / loss
+        df["rsi_14"] = 100 - (100 / (1 + rs))
+        df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
+        return df
+
     def _load_and_process_data(self):
         if not os.path.exists(self.csv_path):
             st.error(f"❌ CSV-Datei nicht gefunden: {self.csv_path}")
@@ -24,7 +36,6 @@ class BTCModelTrainer:
             st.error(f"❌ Fehler beim Einlesen der CSV: {e}")
             return pd.DataFrame()
 
-        # Zeitspalte
         if "datetime" in df.columns:
             df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
         elif "timestamp" in df.columns:
@@ -32,15 +43,7 @@ class BTCModelTrainer:
         else:
             df["datetime"] = pd.date_range(start="2025-01-01 00:00", periods=len(df), freq="1H")
 
-        # Feature Engineering
-        df["ma_8"] = df["close"].rolling(window=8).mean()
-        df["ma_14"] = df["close"].rolling(window=14).mean()
-        delta = df["close"].diff()
-        gain = delta.where(delta > 0, 0).rolling(window=14).mean()
-        loss = -delta.where(delta < 0, 0).rolling(window=14).mean()
-        rs = gain / loss
-        df["rsi_14"] = 100 - (100 / (1 + rs))
-        df["obv"] = np.where(df["close"].diff() > 0, df["volume"], -df["volume"]).cumsum()
+        df = self._add_features(df)
         df["future_close"] = df["close"].shift(-3)
 
         df = df.dropna(subset=[
@@ -127,12 +130,15 @@ class BTCModelTrainer:
                 raise ValueError(f"Fehler bei Modellvorhersage: {e}")
 
             predictions.append(y_pred)
-            df = pd.concat([
-                df,
-                pd.DataFrame([{
-                    "close": y_pred,
-                    "volume": df["volume"].iloc[-1]
-                }])
-            ], ignore_index=True)
+
+            new_row = {
+                "close": y_pred,
+                "volume": df["volume"].iloc[-1],
+                "ma_8": np.nan,
+                "ma_14": np.nan,
+                "rsi_14": np.nan,
+                "obv": np.nan
+            }
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
 
         return predictions
