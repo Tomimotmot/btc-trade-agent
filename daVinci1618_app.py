@@ -11,6 +11,7 @@ import numpy as np
 from utils.chart_utils import draw_price_chart
 from utils.ml_model import BTCModelTrainer
 
+
 # === API-Funktion ===
 def fetch_bitget_spot_data_and_save(symbol="BTCUSDT", granularity="1h", filename="btc_bitget_7days.csv"):
     url = "https://api.bitget.com/api/v2/spot/market/candles"
